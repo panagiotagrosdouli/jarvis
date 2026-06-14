@@ -5,6 +5,7 @@ from assistant.desktop import DesktopAutomation
 from assistant.focus import FocusManager
 from assistant.memory import Memory
 from assistant.pdf_assistant import PDFAssistant
+from assistant.smart_memory import SmartMemory
 from assistant.vision import VisionAssistant
 from assistant.weather import WeatherService
 
@@ -19,10 +20,19 @@ class CommandHandler:
         self.focus = FocusManager()
         self.vision = VisionAssistant()
         self.care = CareCoach()
+        self.smart = SmartMemory()
 
     def handle(self, text: str) -> str | None:
         raw_text = text.strip()
         command = raw_text.lower()
+
+        parsed_exam = self.smart.parse_exam_sentence(raw_text)
+        if parsed_exam:
+            return parsed_exam
+
+        parsed_goal = self.smart.parse_goal_sentence(raw_text)
+        if parsed_goal:
+            return parsed_goal
 
         if command in {"help", "commands", "βοήθεια", "εντολές"}:
             return self.help_text()
@@ -33,6 +43,42 @@ class CommandHandler:
         if command in {"time", "ώρα", "τι ώρα είναι"}:
             now = dt.datetime.now().strftime("%H:%M")
             return f"The current time is {now}."
+
+        if command.startswith("add exam "):
+            parts = raw_text[9:].split(" on ", 1)
+            if len(parts) == 2:
+                subject = parts[0]
+                date_part = parts[1]
+                time_text = ""
+                if " at " in date_part:
+                    date_part, time_text = date_part.split(" at ", 1)
+                return self.smart.add_exam(subject, date_part, time_text)
+            return "Use: add exam Computer Networks on 2026-06-17 at 09:00"
+
+        if command in {"show exams", "exams", "my exams", "εξετάσεις", "εξετασεις"}:
+            return self.smart.list_exams()
+
+        if command in {"next exam", "what is my next exam", "επόμενη εξέταση", "επομενη εξεταση"}:
+            return self.smart.next_exam()
+
+        if command.startswith("days until "):
+            return self.smart.days_until_exam(raw_text[11:])
+
+        if command.startswith("add goal "):
+            goal_text = raw_text[9:]
+            if " by " in goal_text:
+                goal, deadline = goal_text.split(" by ", 1)
+                return self.smart.add_goal(goal, deadline)
+            return self.smart.add_goal(goal_text)
+
+        if command in {"show goals", "goals", "my goals", "στόχοι", "στοχοι"}:
+            return self.smart.list_goals()
+
+        if command.startswith("complete goal "):
+            return self.smart.complete_goal(raw_text[14:])
+
+        if command in {"smart context", "what do you know", "τι ξέρεις για μένα", "τι ξερεις για μενα"}:
+            return self.smart.smart_context()
 
         if command in {"care mode", "digital mama", "coach me", "μαμα mode", "μαμά mode"}:
             return self.care.care_mode()
@@ -186,6 +232,14 @@ class CommandHandler:
     def help_text() -> str:
         return (
             "Available commands:\n"
+            "- add exam Computer Networks on 2026-06-17 at 09:00\n"
+            "- show exams\n"
+            "- next exam\n"
+            "- days until Computer Networks\n"
+            "- add goal finish Neural Networks by 2026-06-30\n"
+            "- show goals\n"
+            "- complete goal Neural Networks\n"
+            "- smart context\n"
             "- care mode\n"
             "- plan my day\n"
             "- what should i do now\n"
