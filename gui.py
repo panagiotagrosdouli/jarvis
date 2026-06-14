@@ -7,7 +7,7 @@ load_dotenv()
 from assistant.brain import Brain
 from assistant.commands import CommandHandler
 from assistant.memory import Memory
-from assistant.speech import listen
+from assistant.speech import listen, speak
 
 
 class JarvisWindow(QWidget):
@@ -32,7 +32,7 @@ class JarvisWindow(QWidget):
         self.send_button = QPushButton('Send')
         self.send_button.clicked.connect(self.send_message)
 
-        self.voice_button = QPushButton('🎤 Start Listening')
+        self.voice_button = QPushButton('Start Listening')
         self.voice_button.clicked.connect(self.listen_and_send)
 
         layout.addWidget(self.chat)
@@ -56,6 +56,7 @@ class JarvisWindow(QWidget):
             response = self.brain.answer(text)
 
         self.chat.append(f'Jarvis: {response}')
+        speak(response)
 
     def send_message(self):
         text = self.input_box.text().strip()
