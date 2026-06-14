@@ -1,4 +1,5 @@
 import datetime as dt
+from assistant.daily_companion import DailyCompanion
 from assistant.desktop import DesktopAutomation
 from assistant.memory import Memory
 
@@ -7,6 +8,7 @@ class CommandHandler:
     def __init__(self, memory: Memory):
         self.memory = memory
         self.desktop = DesktopAutomation()
+        self.daily = DailyCompanion()
 
     def handle(self, text: str) -> str | None:
         raw_text = text.strip()
@@ -21,6 +23,42 @@ class CommandHandler:
         if command in {"time", "ώρα", "τι ώρα είναι"}:
             now = dt.datetime.now().strftime("%H:%M")
             return f"The current time is {now}."
+
+        if command in {"daily briefing", "briefing", "καλημέρα", "πρωινό"}:
+            return self.daily.briefing()
+
+        if command in {"daily lesson", "μάθημα ημέρας"}:
+            return self.daily.daily_lesson()
+
+        if command in {"daily tip", "tip", "συμβουλή"}:
+            return self.daily.practical_tip()
+
+        if command in {"study mode", "διάβασμα"}:
+            return self.daily.study_mode()
+
+        if command in {"home mode", "σπίτι"}:
+            return self.daily.home_mode()
+
+        if command in {"evening reflection", "βραδινός απολογισμός"}:
+            return self.daily.evening_reflection()
+
+        if command.startswith("add task "):
+            return self.daily.add_task(raw_text[9:])
+
+        if command.startswith("βάλε δουλειά "):
+            return self.daily.add_task(raw_text[13:])
+
+        if command in {"tasks", "δουλειές", "εργασίες"}:
+            tasks = self.daily.list_tasks()
+            if not tasks:
+                return "Δεν έχεις ανοιχτές εργασίες."
+            return "Ανοιχτές εργασίες:\n" + "\n".join(tasks)
+
+        if command.startswith("done "):
+            return self.daily.complete_task(raw_text[5:])
+
+        if command.startswith("ολοκλήρωσα "):
+            return self.daily.complete_task(raw_text[11:])
 
         if command.startswith("remember "):
             return self.memory.remember(raw_text[9:])
@@ -72,19 +110,20 @@ class CommandHandler:
     def help_text() -> str:
         return (
             "Available commands:\n"
-            "- help / βοήθεια\n"
-            "- time / ώρα\n"
+            "- daily briefing / καλημέρα\n"
+            "- daily lesson / μάθημα ημέρας\n"
+            "- daily tip / συμβουλή\n"
+            "- add task βάλε πλυντήριο\n"
+            "- tasks / δουλειές\n"
+            "- done 1\n"
+            "- study mode / διάβασμα\n"
+            "- home mode / σπίτι\n"
+            "- evening reflection\n"
             "- remember key=value\n"
-            "- θυμήσου key=value\n"
             "- show memory / μνήμη\n"
-            "- forget key / ξέχνα key\n"
-            "- who am i\n"
-            "- memory key\n"
             "- open google\n"
             "- open youtube\n"
             "- open app chrome\n"
-            "- open app vscode\n"
-            "- open app spotify\n"
             "- google search words\n"
             "- youtube search words\n"
             "- exit"
