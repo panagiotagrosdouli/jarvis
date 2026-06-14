@@ -1,0 +1,17 @@
+{
+  "language": "en",
+  "voice_en": "en-US-AriaNeural",
+  "voice_el": "el-GR-AthinaNeural",
+  "wake_words": [
+    "jarvis",
+    "hey jarvis",
+    "τζάρβις",
+    "τζαρβις",
+    "άνοιξε",
+    "ανοιξε"
+  ],
+  "theme": "ironman",
+  "transparency": 0.92,
+  "city": "Thessaloniki",
+  "briefing_once_per_day": true
+}
