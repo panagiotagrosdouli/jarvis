@@ -2,6 +2,7 @@ import datetime as dt
 from assistant.daily_companion import DailyCompanion
 from assistant.desktop import DesktopAutomation
 from assistant.memory import Memory
+from assistant.pdf_assistant import PDFAssistant
 from assistant.weather import WeatherService
 
 
@@ -11,6 +12,7 @@ class CommandHandler:
         self.desktop = DesktopAutomation()
         self.daily = DailyCompanion()
         self.weather = WeatherService()
+        self.pdf = PDFAssistant()
 
     def handle(self, text: str) -> str | None:
         raw_text = text.strip()
@@ -34,6 +36,18 @@ class CommandHandler:
 
         if command.startswith("καιρός "):
             return self.weather.summary(raw_text[7:])
+
+        if command.startswith("pdf summary "):
+            return self.pdf.build_prompt(raw_text[12:], "summary")
+
+        if command.startswith("pdf flashcards "):
+            return self.pdf.build_prompt(raw_text[15:], "flashcards")
+
+        if command.startswith("pdf quiz "):
+            return self.pdf.build_prompt(raw_text[9:], "quiz")
+
+        if command.startswith("pdf exam "):
+            return self.pdf.build_prompt(raw_text[9:], "exam")
 
         if command in {"daily briefing", "briefing", "καλημέρα", "πρωινό"}:
             return self.daily.briefing()
@@ -127,6 +141,10 @@ class CommandHandler:
             "- add task task name\n"
             "- tasks\n"
             "- done 1\n"
+            "- pdf summary path/to/file.pdf\n"
+            "- pdf flashcards path/to/file.pdf\n"
+            "- pdf quiz path/to/file.pdf\n"
+            "- pdf exam path/to/file.pdf\n"
             "- daily lesson\n"
             "- daily tip\n"
             "- study mode\n"
