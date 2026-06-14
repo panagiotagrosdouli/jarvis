@@ -50,20 +50,37 @@ def speak(text: str) -> None:
         print(clean_text)
 
 
+def _preferred_microphone_index(microphones: list[str]) -> int | None:
+    if not microphones:
+        return None
+
+    preferred_names = ["pulse", "default", "rdpsource", "microphone", "mic"]
+    for preferred in preferred_names:
+        for index, name in enumerate(microphones):
+            if preferred in name.lower():
+                return index
+
+    return 0
+
+
 def listen() -> str:
     try:
         import speech_recognition as sr
         recognizer = sr.Recognizer()
 
         microphones = sr.Microphone.list_microphone_names()
-        if not microphones:
+        device_index = _preferred_microphone_index(microphones)
+        if device_index is None:
             return ""
 
-        with sr.Microphone() as source:
-            print("Listening...")
+        with sr.Microphone(device_index=device_index) as source:
+            print(f"Listening with microphone: {microphones[device_index]}")
             recognizer.adjust_for_ambient_noise(source, duration=0.5)
-            audio = recognizer.listen(source, timeout=5, phrase_time_limit=10)
+            audio = recognizer.listen(source, timeout=6, phrase_time_limit=12)
 
-        return recognizer.recognize_google(audio, language="el-GR")
+        try:
+            return recognizer.recognize_google(audio, language="el-GR")
+        except Exception:
+            return recognizer.recognize_google(audio, language="en-US")
     except Exception:
         return ""
