@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QFrame,
 )
+from PyQt6.QtCore import QThread, pyqtSignal
 import sys
 from dotenv import load_dotenv
 
@@ -20,6 +21,29 @@ from assistant.memory import Memory
 from assistant.speech import listen, speak_async
 
 
+class ResponseWorker(QThread):
+    finished = pyqtSignal(str, str)
+
+    def __init__(self, text: str, brain: Brain, commands: CommandHandler):
+        super().__init__()
+        self.text = text
+        self.brain = brain
+        self.commands = commands
+
+    def run(self):
+        response = self.commands.handle(self.text)
+        if response is None:
+            response = self.brain.answer(self.text)
+        self.finished.emit(self.text, response)
+
+
+class ListenWorker(QThread):
+    finished = pyqtSignal(str)
+
+    def run(self):
+        self.finished.emit(listen())
+
+
 class JarvisWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -27,6 +51,8 @@ class JarvisWindow(QWidget):
         self.brain = Brain()
         self.memory = Memory()
         self.commands = CommandHandler(self.memory)
+        self.response_worker = None
+        self.listen_worker = None
 
         self.setWindowTitle('Jarvis AI Dashboard')
         self.resize(1100, 720)
@@ -58,8 +84,8 @@ class JarvisWindow(QWidget):
         subtitle = QLabel('Personal AI Companion')
         subtitle.setObjectName('subtitle')
 
-        status = QLabel('● Online')
-        status.setObjectName('status')
+        self.status = QLabel('● Online')
+        self.status.setObjectName('status')
 
         self.voice_button = QPushButton('🎤 Άκουσέ με')
         self.voice_button.clicked.connect(self.listen_and_send)
@@ -81,7 +107,7 @@ class JarvisWindow(QWidget):
 
         layout.addWidget(title)
         layout.addWidget(subtitle)
-        layout.addWidget(status)
+        layout.addWidget(self.status)
         layout.addSpacing(12)
         layout.addWidget(self.voice_button)
         layout.addWidget(self.voice_chat_button)
@@ -157,21 +183,34 @@ class JarvisWindow(QWidget):
         frame.setLayout(layout)
         return frame
 
+    def set_busy(self, is_busy: bool, text: str = '● Online'):
+        self.send_button.setDisabled(is_busy)
+        self.voice_button.setDisabled(is_busy)
+        self.voice_chat_button.setDisabled(is_busy)
+        self.status.setText(text)
+
     def process_text(self, text: str):
+        if self.response_worker and self.response_worker.isRunning():
+            self.chat.append('<span class="jarvis">Jarvis:</span> Περιμένω να τελειώσει η προηγούμενη απάντηση.')
+            return
+
         self.chat.append(f'<span class="user">You:</span> {text}')
+        self.chat.append('<span class="jarvis">Jarvis:</span> Σκέφτομαι...')
+        self.set_busy(True, '● Thinking')
 
-        response = self.commands.handle(text)
+        self.response_worker = ResponseWorker(text, self.brain, self.commands)
+        self.response_worker.finished.connect(self.on_response_ready)
+        self.response_worker.start()
 
+    def on_response_ready(self, text: str, response: str):
         if response == 'EXIT':
             self.close()
             return
 
-        if response is None:
-            response = self.brain.answer(text)
-
         safe_response = response.replace('\n', '<br>')
         self.chat.append(f'<span class="jarvis">Jarvis:</span> {safe_response}')
         speak_async(response)
+        self.set_busy(False, '● Online')
 
     def send_message(self):
         text = self.input_box.text().strip()
@@ -182,9 +221,17 @@ class JarvisWindow(QWidget):
         self.input_box.clear()
 
     def listen_and_send(self):
-        self.chat.append('<span class="jarvis">Jarvis:</span> Σε ακούω...')
-        text = listen()
+        if self.listen_worker and self.listen_worker.isRunning():
+            return
 
+        self.chat.append('<span class="jarvis">Jarvis:</span> Σε ακούω...')
+        self.set_busy(True, '● Listening')
+        self.listen_worker = ListenWorker()
+        self.listen_worker.finished.connect(self.on_listen_ready)
+        self.listen_worker.start()
+
+    def on_listen_ready(self, text: str):
+        self.set_busy(False, '● Online')
         if not text:
             message = 'Δεν άκουσα κάτι καθαρά. Έλεγξε το μικρόφωνο και δοκίμασε ξανά.'
             self.chat.append(f'<span class="jarvis">Jarvis:</span> {message}')
@@ -265,6 +312,10 @@ class JarvisWindow(QWidget):
         QPushButton:hover {
             background-color: #38bdf8;
             color: #020617;
+        }
+        QPushButton:disabled {
+            background-color: #334155;
+            color: #94a3b8;
         }
         .jarvis {
             color: #38bdf8;
