@@ -3,6 +3,12 @@ import os
 import shutil
 import subprocess
 import tempfile
+import threading
+
+
+def speak_async(text: str) -> None:
+    thread = threading.Thread(target=speak, args=(text,), daemon=True)
+    thread.start()
 
 
 def speak(text: str) -> None:
@@ -10,7 +16,7 @@ def speak(text: str) -> None:
     if not clean_text:
         return
 
-    voice = os.getenv("JARVIS_EDGE_VOICE", "en-US-AriaNeural")
+    voice = os.getenv("JARVIS_EDGE_VOICE", "el-GR-AthinaNeural")
     ffplay_bin = shutil.which("ffplay")
 
     try:
@@ -31,6 +37,7 @@ def speak(text: str) -> None:
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 check=False,
+                timeout=90,
             )
 
         try:
