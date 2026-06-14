@@ -5,6 +5,23 @@ import subprocess
 import tempfile
 import threading
 
+LANGUAGE = os.getenv("JARVIS_LANGUAGE", "en")
+
+
+def set_language(language: str) -> None:
+    global LANGUAGE
+    LANGUAGE = "el" if language.lower().startswith("el") or language.lower().startswith("gr") else "en"
+
+
+def get_language() -> str:
+    return LANGUAGE
+
+
+def _voice_for_language() -> str:
+    if LANGUAGE == "el":
+        return os.getenv("JARVIS_EDGE_VOICE_EL", "el-GR-AthinaNeural")
+    return os.getenv("JARVIS_EDGE_VOICE_EN", "en-US-AriaNeural")
+
 
 def speak_async(text: str) -> None:
     thread = threading.Thread(target=speak, args=(text,), daemon=True)
@@ -16,7 +33,7 @@ def speak(text: str) -> None:
     if not clean_text:
         return
 
-    voice = os.getenv("JARVIS_EDGE_VOICE", "el-GR-AthinaNeural")
+    voice = _voice_for_language()
     ffplay_bin = shutil.which("ffplay")
 
     try:
@@ -85,9 +102,12 @@ def listen() -> str:
             recognizer.adjust_for_ambient_noise(source, duration=0.5)
             audio = recognizer.listen(source, timeout=6, phrase_time_limit=12)
 
+        primary = "el-GR" if LANGUAGE == "el" else "en-US"
+        secondary = "en-US" if LANGUAGE == "el" else "el-GR"
+
         try:
-            return recognizer.recognize_google(audio, language="el-GR")
+            return recognizer.recognize_google(audio, language=primary)
         except Exception:
-            return recognizer.recognize_google(audio, language="en-US")
+            return recognizer.recognize_google(audio, language=secondary)
     except Exception:
         return ""
