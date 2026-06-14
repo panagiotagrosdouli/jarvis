@@ -35,10 +35,14 @@ class JarvisWindow(QWidget):
         self.voice_button = QPushButton('Start Listening')
         self.voice_button.clicked.connect(self.listen_and_send)
 
+        self.voice_chat_button = QPushButton('Voice Conversation')
+        self.voice_chat_button.clicked.connect(self.voice_conversation)
+
         layout.addWidget(self.chat)
         layout.addWidget(self.input_box)
         layout.addWidget(self.send_button)
         layout.addWidget(self.voice_button)
+        layout.addWidget(self.voice_chat_button)
 
         self.setLayout(layout)
         self.chat.append('Jarvis: Hello Panagiota! Voice mode is available.')
@@ -71,10 +75,15 @@ class JarvisWindow(QWidget):
         text = listen()
 
         if not text:
-            self.chat.append('Jarvis: I could not hear anything.')
+            self.chat.append('Jarvis: I could not hear anything. Check your microphone settings.')
+            speak('I could not hear anything. Check your microphone settings.')
             return
 
         self.process_text(text)
+
+    def voice_conversation(self):
+        speak('I am listening.')
+        self.listen_and_send()
 
 
 if __name__ == '__main__':
