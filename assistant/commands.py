@@ -2,6 +2,7 @@ import datetime as dt
 from assistant.daily_companion import DailyCompanion
 from assistant.desktop import DesktopAutomation
 from assistant.memory import Memory
+from assistant.weather import WeatherService
 
 
 class CommandHandler:
@@ -9,6 +10,7 @@ class CommandHandler:
         self.memory = memory
         self.desktop = DesktopAutomation()
         self.daily = DailyCompanion()
+        self.weather = WeatherService()
 
     def handle(self, text: str) -> str | None:
         raw_text = text.strip()
@@ -23,6 +25,15 @@ class CommandHandler:
         if command in {"time", "ώρα", "τι ώρα είναι"}:
             now = dt.datetime.now().strftime("%H:%M")
             return f"The current time is {now}."
+
+        if command in {"weather", "today weather", "what is the weather", "καιρός", "τι καιρό έχει"}:
+            return self.weather.summary()
+
+        if command.startswith("weather "):
+            return self.weather.summary(raw_text[8:])
+
+        if command.startswith("καιρός "):
+            return self.weather.summary(raw_text[7:])
 
         if command in {"daily briefing", "briefing", "καλημέρα", "πρωινό"}:
             return self.daily.briefing()
@@ -48,11 +59,11 @@ class CommandHandler:
         if command.startswith("βάλε δουλειά "):
             return self.daily.add_task(raw_text[13:])
 
-        if command in {"tasks", "δουλειές", "εργασίες"}:
+        if command in {"tasks", "show tasks", "δουλειές", "εργασίες"}:
             tasks = self.daily.list_tasks()
             if not tasks:
-                return "Δεν έχεις ανοιχτές εργασίες."
-            return "Ανοιχτές εργασίες:\n" + "\n".join(tasks)
+                return "Open tasks: none."
+            return "Open tasks:\n" + "\n".join(tasks)
 
         if command.startswith("done "):
             return self.daily.complete_task(raw_text[5:])
@@ -110,17 +121,19 @@ class CommandHandler:
     def help_text() -> str:
         return (
             "Available commands:\n"
-            "- daily briefing / καλημέρα\n"
-            "- daily lesson / μάθημα ημέρας\n"
-            "- daily tip / συμβουλή\n"
-            "- add task βάλε πλυντήριο\n"
-            "- tasks / δουλειές\n"
+            "- daily briefing\n"
+            "- weather\n"
+            "- weather city\n"
+            "- add task task name\n"
+            "- tasks\n"
             "- done 1\n"
-            "- study mode / διάβασμα\n"
-            "- home mode / σπίτι\n"
+            "- daily lesson\n"
+            "- daily tip\n"
+            "- study mode\n"
+            "- home mode\n"
             "- evening reflection\n"
             "- remember key=value\n"
-            "- show memory / μνήμη\n"
+            "- show memory\n"
             "- open google\n"
             "- open youtube\n"
             "- open app chrome\n"
