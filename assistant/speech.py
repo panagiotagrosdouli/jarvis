@@ -5,12 +5,19 @@ import subprocess
 import tempfile
 import threading
 
-LANGUAGE = os.getenv("JARVIS_LANGUAGE", "en")
+from assistant.settings import SettingsManager
+
+_SETTINGS = SettingsManager()
+LANGUAGE = os.getenv("JARVIS_LANGUAGE", _SETTINGS.language())
 
 
 def set_language(language: str) -> None:
     global LANGUAGE
     LANGUAGE = "el" if language.lower().startswith("el") or language.lower().startswith("gr") else "en"
+    try:
+        _SETTINGS.set("language", LANGUAGE)
+    except Exception:
+        pass
 
 
 def get_language() -> str:
@@ -19,8 +26,8 @@ def get_language() -> str:
 
 def _voice_for_language() -> str:
     if LANGUAGE == "el":
-        return os.getenv("JARVIS_EDGE_VOICE_EL", "el-GR-AthinaNeural")
-    return os.getenv("JARVIS_EDGE_VOICE_EN", "en-US-AriaNeural")
+        return os.getenv("JARVIS_EDGE_VOICE_EL", _SETTINGS.voice_for_language("el"))
+    return os.getenv("JARVIS_EDGE_VOICE_EN", _SETTINGS.voice_for_language("en"))
 
 
 def speak_async(text: str) -> None:
