@@ -1,0 +1,13 @@
+{
+  "active_mission": {
+    "name": "Pass Computer Networks",
+    "progress": 0,
+    "objectives": [
+      {"name": "Routing", "done": false},
+      {"name": "TCP/IP", "done": false},
+      {"name": "DNS", "done": false},
+      {"name": "Subnetting", "done": false},
+      {"name": "Security", "done": false}
+    ]
+  }
+}
