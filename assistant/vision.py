@@ -2,11 +2,14 @@ from pathlib import Path
 import datetime as dt
 import subprocess
 
+from assistant.brain import Brain
+
 
 class VisionAssistant:
     def __init__(self, output_dir: str = "screenshots"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
+        self.brain = Brain()
 
     def capture_screen(self) -> str:
         timestamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -67,27 +70,78 @@ $bitmap.Dispose()
         return str(path.resolve()).replace("'", "''")
 
     def analyze_screen(self) -> str:
+        return self._analyze_with_ai("analysis")
+
+    def explain_screen(self) -> str:
+        return self._analyze_with_ai("explain")
+
+    def summarize_screen(self) -> str:
+        return self._analyze_with_ai("summary")
+
+    def flashcards_from_screen(self) -> str:
+        return self._analyze_with_ai("flashcards")
+
+    def quiz_from_screen(self) -> str:
+        return self._analyze_with_ai("quiz")
+
+    def raw_screen_text(self) -> str:
+        image_path, ocr_text, error = self._capture_and_read()
+        if error:
+            return error
+        if not ocr_text:
+            return (
+                f"Screen captured: {image_path}\n\n"
+                "I captured the screen, but I could not extract readable text."
+            )
+        return f"Screen captured: {image_path}\n\nText detected on screen:\n{ocr_text[:4000]}"
+
+    def _capture_and_read(self) -> tuple[str, str, str | None]:
         image_path = self.capture_screen()
         if image_path.startswith("SCREENSHOT_ERROR"):
-            return (
+            return "", "", (
                 "I could not capture the screen. "
                 "If you are using WSL, make sure Windows PowerShell is available. "
                 f"Details: {image_path}"
             )
+        return image_path, self._try_ocr(image_path), None
 
-        ocr_text = self._try_ocr(image_path)
-        if ocr_text:
+    def _analyze_with_ai(self, mode: str) -> str:
+        image_path, ocr_text, error = self._capture_and_read()
+        if error:
+            return error
+
+        if not ocr_text:
             return (
                 f"Screen captured: {image_path}\n\n"
-                "Text detected on screen:\n"
-                f"{ocr_text[:4000]}\n\n"
-                "You can ask me to explain this screen, debug it, summarize it, or turn it into study notes."
+                "I captured the screen, but I could not extract readable text. "
+                "Open a page with visible text, a PDF, notes, code, or a slide and try again."
             )
 
+        task = self._task_for_mode(mode)
+        prompt = (
+            f"{task}\n\n"
+            "You are analyzing OCR text extracted from the user's current screen. "
+            "Be practical and clear. If it looks like code, point out possible problems. "
+            "If it looks like university material, explain it like a study tutor. "
+            "If the OCR is messy, infer carefully and mention uncertainty.\n\n"
+            f"Screenshot path: {image_path}\n\n"
+            f"Screen OCR text:\n{ocr_text[:9000]}"
+        )
+        answer = self.brain.answer(prompt)
+        return f"Screen captured: {image_path}\n\n{answer}"
+
+    def _task_for_mode(self, mode: str) -> str:
+        if mode == "summary":
+            return "Summarize what is on the screen in a short, useful way."
+        if mode == "explain":
+            return "Explain what is on the screen step by step, as if teaching the user."
+        if mode == "flashcards":
+            return "Create useful study flashcards from the screen content. Use Question and Answer format."
+        if mode == "quiz":
+            return "Create a short quiz from the screen content and include the correct answers."
         return (
-            f"Screen captured: {image_path}\n\n"
-            "I captured the screen, but I could not extract readable text. "
-            "If this is a slide, image, or app screen, we can add stronger computer vision in the next step."
+            "Analyze the current screen. Identify what the user appears to be looking at, "
+            "summarize the important information, and suggest the next useful action."
         )
 
     def _try_ocr(self, image_path: str) -> str:
