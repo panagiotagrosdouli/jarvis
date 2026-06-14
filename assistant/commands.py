@@ -1,6 +1,7 @@
 import datetime as dt
 from assistant.daily_companion import DailyCompanion
 from assistant.desktop import DesktopAutomation
+from assistant.focus import FocusManager
 from assistant.memory import Memory
 from assistant.pdf_assistant import PDFAssistant
 from assistant.weather import WeatherService
@@ -13,6 +14,7 @@ class CommandHandler:
         self.daily = DailyCompanion()
         self.weather = WeatherService()
         self.pdf = PDFAssistant()
+        self.focus = FocusManager()
 
     def handle(self, text: str) -> str | None:
         raw_text = text.strip()
@@ -36,6 +38,18 @@ class CommandHandler:
 
         if command.startswith("καιρός "):
             return self.weather.summary(raw_text[7:])
+
+        if command.startswith("start focus"):
+            return self.focus.start(raw_text[11:].strip() or "general")
+
+        if command in {"end focus", "stop focus"}:
+            return self.focus.end()
+
+        if command in {"focus status", "current focus"}:
+            return self.focus.status()
+
+        if command in {"focus stats", "study stats"}:
+            return self.focus.stats()
 
         if command.startswith("pdf summary "):
             return self.pdf.build_prompt(raw_text[12:], "summary")
@@ -141,6 +155,10 @@ class CommandHandler:
             "- add task task name\n"
             "- tasks\n"
             "- done 1\n"
+            "- start focus topic\n"
+            "- end focus\n"
+            "- focus status\n"
+            "- focus stats\n"
             "- pdf summary path/to/file.pdf\n"
             "- pdf flashcards path/to/file.pdf\n"
             "- pdf quiz path/to/file.pdf\n"
