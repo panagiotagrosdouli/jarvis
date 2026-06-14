@@ -58,8 +58,23 @@ class CommandHandler:
         if command.startswith("καιρός "):
             return self.weather.summary(raw_text[7:])
 
-        if command in {"analyze screen", "screen analysis", "what is on my screen", "screenshot", "analyze my screen"}:
+        if command in {"analyze screen", "screen analysis", "what is on my screen", "analyze my screen", "what am i looking at"}:
             return self.vision.analyze_screen()
+
+        if command in {"explain screen", "explain this screen"}:
+            return self.vision.explain_screen()
+
+        if command in {"summarize screen", "summarize this page", "summarize page"}:
+            return self.vision.summarize_screen()
+
+        if command in {"create flashcards from screen", "flashcards from screen", "screen flashcards"}:
+            return self.vision.flashcards_from_screen()
+
+        if command in {"create quiz from screen", "quiz from screen", "screen quiz"}:
+            return self.vision.quiz_from_screen()
+
+        if command in {"screenshot", "screen text", "read screen"}:
+            return self.vision.raw_screen_text()
 
         if command.startswith("start focus"):
             return self.focus.start(raw_text[11:].strip() or "general")
@@ -179,6 +194,11 @@ class CommandHandler:
             "- daily briefing\n"
             "- weather\n"
             "- analyze screen\n"
+            "- explain screen\n"
+            "- summarize screen\n"
+            "- create flashcards from screen\n"
+            "- create quiz from screen\n"
+            "- read screen\n"
             "- add task task name\n"
             "- tasks\n"
             "- done 1\n"
