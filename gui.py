@@ -1,5 +1,8 @@
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QLineEdit, QPushButton, QLabel, QFrame
 from PyQt6.QtCore import QThread, pyqtSignal, QTimer
+import datetime as dt
+import json
+from pathlib import Path
 import sys
 from dotenv import load_dotenv
 
@@ -82,6 +85,7 @@ class JarvisWindow(QWidget):
         self.listen_worker = None
         self.ambient_worker = None
         self.language = get_language()
+        self.state_path = Path("jarvis_state.json")
 
         self.setWindowTitle('Jarvis AI Assistant')
         self.resize(980, 680)
@@ -149,12 +153,41 @@ class JarvisWindow(QWidget):
         return panel
 
     def startup_greeting(self):
-        greeting = 'Good morning Panagiota. I am ready. Say Jarvis when you need me.'
-        if self.language == 'el':
-            greeting = 'Καλημέρα Παναγιώτα. Είμαι έτοιμος. Πες Jarvis όταν με χρειαστείς.'
-        self.chat.append(f'<span class="jarvis">Jarvis:</span> {greeting}')
-        speak_async(greeting)
-        self.process_text('daily briefing', show_user=False)
+        if self.should_show_daily_briefing():
+            greeting = 'Good morning Panagiota. Here is your daily briefing.'
+            if self.language == 'el':
+                greeting = 'Καλημέρα Παναγιώτα. Αυτό είναι το ημερήσιο briefing σου.'
+            self.chat.append(f'<span class="jarvis">Jarvis:</span> {greeting}')
+            speak_async(greeting)
+            self.mark_daily_briefing_shown()
+            self.process_text('daily briefing', show_user=False)
+        else:
+            greeting = 'Welcome back Panagiota. I am ready. Say Jarvis when you need me.'
+            if self.language == 'el':
+                greeting = 'Καλώς ήρθες πίσω Παναγιώτα. Είμαι έτοιμος. Πες Jarvis όταν με χρειαστείς.'
+            self.chat.append(f'<span class="jarvis">Jarvis:</span> {greeting}')
+            speak_async(greeting)
+
+    def should_show_daily_briefing(self) -> bool:
+        today = dt.date.today().isoformat()
+        try:
+            if self.state_path.exists():
+                state = json.loads(self.state_path.read_text(encoding="utf-8"))
+                return state.get("last_daily_briefing_date") != today
+        except Exception:
+            return True
+        return True
+
+    def mark_daily_briefing_shown(self):
+        today = dt.date.today().isoformat()
+        state = {}
+        try:
+            if self.state_path.exists():
+                state = json.loads(self.state_path.read_text(encoding="utf-8"))
+        except Exception:
+            state = {}
+        state["last_daily_briefing_date"] = today
+        self.state_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
 
     def start_ambient_mode(self):
         if self.ambient_worker and self.ambient_worker.isRunning():
