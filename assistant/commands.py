@@ -46,11 +46,18 @@ class CommandHandler:
         if command in {"who am i", "whoami", "ποια είμαι", "ποιος είμαι"}:
             return self.memory.profile_summary()
 
-        if command.startswith("what is "):
-            key = raw_text[8:].strip().rstrip("?")
+        if command.startswith("memory "):
+            key = raw_text[7:].strip().rstrip("?")
             value = self.memory.get_item(key)
             if value is None:
                 return f"I do not know {key} yet."
+            return f"{key}: {value}"
+
+        if command.startswith("what do you know about "):
+            key = raw_text[24:].strip().rstrip("?")
+            value = self.memory.get_item(key)
+            if value is None:
+                return f"I do not have a saved memory for {key} yet."
             return f"{key}: {value}"
 
         if command == "open youtube":
@@ -74,7 +81,8 @@ class CommandHandler:
             "- show memory / μνήμη\n"
             "- forget key / ξέχνα key\n"
             "- who am i\n"
-            "- what is key\n"
+            "- memory key\n"
+            "- what do you know about key\n"
             "- open youtube\n"
             "- open google\n"
             "- exit"
