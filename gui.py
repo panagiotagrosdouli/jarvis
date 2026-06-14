@@ -34,6 +34,44 @@ class ListenWorker(QThread):
         self.finished.emit(listen())
 
 
+class AmbientWorker(QThread):
+    heard = pyqtSignal(str)
+    status = pyqtSignal(str)
+
+    def __init__(self):
+        super().__init__()
+        self.running = True
+        self.awaiting_command = False
+        self.wake_words = ["jarvis", "hey jarvis", "τζάρβις", "τζαρβις", "άνοιξε", "ανοιξε"]
+        self.stop_words = ["stop listening", "stop", "σταμάτα", "σταματα"]
+
+    def stop(self):
+        self.running = False
+
+    def run(self):
+        while self.running:
+            self.status.emit("Listening for Jarvis")
+            text = listen().strip()
+            if not text:
+                continue
+
+            lower = text.lower()
+            if any(word in lower for word in self.stop_words):
+                self.awaiting_command = False
+                self.status.emit("Paused")
+                continue
+
+            if self.awaiting_command:
+                self.awaiting_command = False
+                self.heard.emit(text)
+                continue
+
+            if any(word in lower for word in self.wake_words):
+                self.awaiting_command = True
+                self.status.emit("Awake")
+                self.heard.emit("__WAKE__")
+
+
 class JarvisWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -42,6 +80,7 @@ class JarvisWindow(QWidget):
         self.commands = CommandHandler(self.memory)
         self.response_worker = None
         self.listen_worker = None
+        self.ambient_worker = None
         self.language = get_language()
 
         self.setWindowTitle('Jarvis AI Assistant')
@@ -57,6 +96,7 @@ class JarvisWindow(QWidget):
 
         self.apply_language_text()
         QTimer.singleShot(1000, self.startup_greeting)
+        QTimer.singleShot(2500, self.start_ambient_mode)
 
     def build_header(self):
         panel = QFrame()
@@ -109,12 +149,31 @@ class JarvisWindow(QWidget):
         return panel
 
     def startup_greeting(self):
-        greeting = 'Good morning Panagiota. I am ready. What would you like to focus on today?'
+        greeting = 'Good morning Panagiota. I am ready. Say Jarvis when you need me.'
         if self.language == 'el':
-            greeting = 'Καλημέρα Παναγιώτα. Είμαι έτοιμος. Τι θέλεις να δούμε σήμερα;'
+            greeting = 'Καλημέρα Παναγιώτα. Είμαι έτοιμος. Πες Jarvis όταν με χρειαστείς.'
         self.chat.append(f'<span class="jarvis">Jarvis:</span> {greeting}')
         speak_async(greeting)
         self.process_text('daily briefing', show_user=False)
+
+    def start_ambient_mode(self):
+        if self.ambient_worker and self.ambient_worker.isRunning():
+            return
+        self.ambient_worker = AmbientWorker()
+        self.ambient_worker.heard.connect(self.on_ambient_heard)
+        self.ambient_worker.status.connect(self.on_ambient_status)
+        self.ambient_worker.start()
+
+    def on_ambient_status(self, text: str):
+        self.status.setText(text)
+
+    def on_ambient_heard(self, text: str):
+        if text == '__WAKE__':
+            message = 'I am listening. What would you like to do?' if self.language == 'en' else 'Σε ακούω. Τι θέλεις να κάνουμε;'
+            self.chat.append(f'<span class="jarvis">Jarvis:</span> {message}')
+            speak_async(message)
+            return
+        self.process_text(text)
 
     def toggle_language(self):
         self.language = 'el' if self.language == 'en' else 'en'
@@ -141,7 +200,8 @@ class JarvisWindow(QWidget):
     def set_busy(self, is_busy: bool, text: str = 'Online'):
         self.send_button.setDisabled(is_busy)
         self.listen_button.setDisabled(is_busy)
-        self.status.setText(text)
+        if text:
+            self.status.setText(text)
 
     def process_text(self, text: str, show_user: bool = True):
         if self.response_worker and self.response_worker.isRunning():
@@ -161,7 +221,7 @@ class JarvisWindow(QWidget):
         safe_response = response.replace('\n', '<br>')
         self.chat.append(f'<span class="jarvis">Jarvis:</span> {safe_response}')
         speak_async(response)
-        self.set_busy(False, 'Online')
+        self.set_busy(False, 'Listening for Jarvis')
 
     def send_message(self):
         text = self.input_box.text().strip()
@@ -179,13 +239,18 @@ class JarvisWindow(QWidget):
         self.listen_worker.start()
 
     def on_listen_ready(self, text: str):
-        self.set_busy(False, 'Online')
+        self.set_busy(False, 'Listening for Jarvis')
         if not text:
             message = 'I could not hear clearly. Try again.' if self.language == 'en' else 'Δεν άκουσα κάτι καθαρά. Δοκίμασε ξανά.'
             self.chat.append(f'<span class="jarvis">Jarvis:</span> {message}')
             speak_async(message)
             return
         self.process_text(text)
+
+    def closeEvent(self, event):
+        if self.ambient_worker:
+            self.ambient_worker.stop()
+        event.accept()
 
     @staticmethod
     def stylesheet():
