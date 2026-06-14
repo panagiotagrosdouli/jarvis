@@ -1,8 +1,8 @@
+import asyncio
 import os
 import shutil
 import subprocess
 import tempfile
-from pathlib import Path
 
 
 def speak(text: str) -> None:
@@ -10,36 +10,36 @@ def speak(text: str) -> None:
     if not clean_text:
         return
 
-    model_path = Path(os.getenv("PIPER_VOICE_MODEL", "voices/en_US-amy-medium.onnx"))
-    piper_bin = shutil.which("piper")
+    voice = os.getenv("JARVIS_EDGE_VOICE", "en-US-AriaNeural")
     ffplay_bin = shutil.which("ffplay")
 
-    if piper_bin and ffplay_bin and model_path.exists():
-        try:
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_audio:
-                output_path = temp_audio.name
+    try:
+        import edge_tts
 
-            subprocess.run(
-                [piper_bin, "--model", str(model_path), "--output-file", output_path],
-                input=clean_text,
-                text=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=True,
-            )
+        async def _save_audio(output_path: str) -> None:
+            communicate = edge_tts.Communicate(clean_text, voice)
+            await communicate.save(output_path)
+
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_audio:
+            output_path = temp_audio.name
+
+        asyncio.run(_save_audio(output_path))
+
+        if ffplay_bin:
             subprocess.run(
                 [ffplay_bin, "-nodisp", "-autoexit", "-loglevel", "quiet", output_path],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 check=False,
             )
-            try:
-                os.remove(output_path)
-            except OSError:
-                pass
-            return
-        except Exception:
+
+        try:
+            os.remove(output_path)
+        except OSError:
             pass
+        return
+    except Exception:
+        pass
 
     try:
         import pyttsx3
