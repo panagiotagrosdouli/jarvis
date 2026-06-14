@@ -3,6 +3,7 @@ from assistant.care_coach import CareCoach
 from assistant.daily_companion import DailyCompanion
 from assistant.desktop import DesktopAutomation
 from assistant.focus import FocusManager
+from assistant.jarvis_core import JarvisCore
 from assistant.memory import Memory
 from assistant.pdf_assistant import PDFAssistant
 from assistant.smart_memory import SmartMemory
@@ -21,6 +22,7 @@ class CommandHandler:
         self.vision = VisionAssistant()
         self.care = CareCoach()
         self.smart = SmartMemory()
+        self.core = JarvisCore()
 
     def handle(self, text: str) -> str | None:
         raw_text = text.strip()
@@ -43,6 +45,29 @@ class CommandHandler:
         if command in {"time", "ώρα", "τι ώρα είναι"}:
             now = dt.datetime.now().strftime("%H:%M")
             return f"The current time is {now}."
+
+        if command in {"jarvis status", "status", "system status"}:
+            return self.core.status()
+
+        if command in {"what should i do now", "what now", "τι να κάνω τώρα", "πες μου τι να κάνω"}:
+            return self.core.recommend_next_action()
+
+        if command in {"what should i study", "study priority", "τι να διαβάσω", "τι να διαβασω"}:
+            return self.core.what_should_i_study()
+
+        if command.startswith("prepare me for "):
+            subject = raw_text[15:].replace(" exam", "").strip()
+            return self.core.prepare_for_exam(subject)
+
+        if command.startswith("prepare for "):
+            subject = raw_text[12:].replace(" exam", "").strip()
+            return self.core.prepare_for_exam(subject)
+
+        if command in {"prepare me for exam", "exam prep", "study plan"}:
+            return self.core.prepare_for_exam()
+
+        if command in {"daily intelligence", "intelligence briefing"}:
+            return self.core.daily_intelligence()
 
         if command.startswith("add exam "):
             parts = raw_text[9:].split(" on ", 1)
@@ -85,9 +110,6 @@ class CommandHandler:
 
         if command in {"plan my day", "organize my day", "φτιάξε μου τη μέρα", "οργάνωσε τη μέρα μου"}:
             return self.care.plan_day()
-
-        if command in {"what should i do now", "what now", "τι να κάνω τώρα", "πες μου τι να κάνω"}:
-            return self.care.plan_now()
 
         if command in {"home reset", "cleaning plan", "σπίτι reset", "συμμάζεμα"}:
             return self.care.home_reset()
@@ -232,6 +254,11 @@ class CommandHandler:
     def help_text() -> str:
         return (
             "Available commands:\n"
+            "- jarvis status\n"
+            "- what should i do now\n"
+            "- what should i study\n"
+            "- prepare me for Computer Networks exam\n"
+            "- daily intelligence\n"
             "- add exam Computer Networks on 2026-06-17 at 09:00\n"
             "- show exams\n"
             "- next exam\n"
@@ -242,7 +269,6 @@ class CommandHandler:
             "- smart context\n"
             "- care mode\n"
             "- plan my day\n"
-            "- what should i do now\n"
             "- home reset\n"
             "- study push\n"
             "- daily briefing\n"
