@@ -9,7 +9,6 @@ from PyQt6.QtWidgets import (
     QLabel,
     QFrame,
 )
-from PyQt6.QtCore import Qt
 import sys
 from dotenv import load_dotenv
 
@@ -18,7 +17,7 @@ load_dotenv()
 from assistant.brain import Brain
 from assistant.commands import CommandHandler
 from assistant.memory import Memory
-from assistant.speech import listen, speak
+from assistant.speech import listen, speak_async
 
 
 class JarvisWindow(QWidget):
@@ -46,7 +45,7 @@ class JarvisWindow(QWidget):
         main_layout.addWidget(info_panel, 1)
 
         self.setLayout(main_layout)
-        self.chat.append('<span class="jarvis">Jarvis:</span> Welcome back, Panagiota. Voice mode is available.')
+        self.chat.append('<span class="jarvis">Jarvis:</span> Καλώς ήρθες πίσω, Παναγιώτα. Η φωνητική λειτουργία είναι ενεργή.')
 
     def build_sidebar(self):
         panel = QFrame()
@@ -62,16 +61,16 @@ class JarvisWindow(QWidget):
         status = QLabel('● Online')
         status.setObjectName('status')
 
-        self.voice_button = QPushButton('🎤 Start Listening')
+        self.voice_button = QPushButton('🎤 Άκουσέ με')
         self.voice_button.clicked.connect(self.listen_and_send)
 
-        self.voice_chat_button = QPushButton('🗣 Voice Conversation')
+        self.voice_chat_button = QPushButton('🗣 Φωνητική Συνομιλία')
         self.voice_chat_button.clicked.connect(self.voice_conversation)
 
-        briefing_button = QPushButton('☀ Daily Briefing')
+        briefing_button = QPushButton('☀ Πρωινό Briefing')
         briefing_button.clicked.connect(lambda: self.process_text('daily briefing'))
 
-        tasks_button = QPushButton('✅ Tasks')
+        tasks_button = QPushButton('✅ Εργασίες')
         tasks_button.clicked.connect(lambda: self.process_text('tasks'))
 
         study_button = QPushButton('🎓 Study Mode')
@@ -114,7 +113,7 @@ class JarvisWindow(QWidget):
 
         input_row = QHBoxLayout()
         self.input_box = QLineEdit()
-        self.input_box.setPlaceholderText('Ask Jarvis anything...')
+        self.input_box.setPlaceholderText('Ρώτα τον Jarvis οτιδήποτε...')
         self.input_box.returnPressed.connect(self.send_message)
 
         self.send_button = QPushButton('Send')
@@ -136,7 +135,7 @@ class JarvisWindow(QWidget):
         layout.setSpacing(14)
 
         layout.addWidget(self.card('Today', 'Daily briefing, tasks, study goals'))
-        layout.addWidget(self.card('Voice', 'Edge Neural Voice enabled'))
+        layout.addWidget(self.card('Voice', 'Greek Edge Neural Voice enabled'))
         layout.addWidget(self.card('Memory', 'Personal facts and reminders'))
         layout.addWidget(self.card('Modes', 'Study • Home • Evening'))
         layout.addStretch()
@@ -172,7 +171,7 @@ class JarvisWindow(QWidget):
 
         safe_response = response.replace('\n', '<br>')
         self.chat.append(f'<span class="jarvis">Jarvis:</span> {safe_response}')
-        speak(response)
+        speak_async(response)
 
     def send_message(self):
         text = self.input_box.text().strip()
@@ -183,19 +182,19 @@ class JarvisWindow(QWidget):
         self.input_box.clear()
 
     def listen_and_send(self):
-        self.chat.append('<span class="jarvis">Jarvis:</span> Listening...')
+        self.chat.append('<span class="jarvis">Jarvis:</span> Σε ακούω...')
         text = listen()
 
         if not text:
-            message = 'I could not hear anything. Check your microphone settings.'
+            message = 'Δεν άκουσα κάτι καθαρά. Έλεγξε το μικρόφωνο και δοκίμασε ξανά.'
             self.chat.append(f'<span class="jarvis">Jarvis:</span> {message}')
-            speak(message)
+            speak_async(message)
             return
 
         self.process_text(text)
 
     def voice_conversation(self):
-        speak('I am listening.')
+        speak_async('Σε ακούω.')
         self.listen_and_send()
 
     @staticmethod
