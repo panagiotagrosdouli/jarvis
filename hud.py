@@ -14,6 +14,7 @@ from assistant.focus import FocusManager
 from assistant.memory import Memory
 from assistant.settings import SettingsManager
 from assistant.speech import listen, speak_async
+from assistant.startup import StartupBriefing
 from assistant.weather import WeatherService
 
 
@@ -82,11 +83,12 @@ class JarvisHUD(QWidget):
         self.memory = Memory()
         self.brain = Brain()
         self.commands = CommandHandler(self.memory)
+        self.startup = StartupBriefing()
         self.voice_worker = None
         self.response_worker = None
         self.drag_position = QPoint()
 
-        self.setWindowTitle("Jarvis HUD")
+        self.setWindowTitle("JARVIS")
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
@@ -162,8 +164,10 @@ class JarvisHUD(QWidget):
         self.voice_worker.start()
 
     def speak_startup(self):
-        message = "Jarvis HUD is online. Say Jarvis when you need me."
+        message = self.startup.startup_message()
+        short_message = message.replace("\n", " ")[:180]
         self.set_status("Online")
+        self.last_answer_label.setText(f"Answer: {short_message}")
         speak_async(message)
 
     def on_wake(self):
