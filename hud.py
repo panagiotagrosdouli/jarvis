@@ -43,11 +43,21 @@ class HUDVoiceWorker(QThread):
         super().__init__()
         self.running = True
         self.awaiting_command = False
-        self.wake_words = wake_words
+        self.wake_words = sorted(wake_words, key=len, reverse=True)
         self.stop_words = ["stop listening", "stop", "σταμάτα", "σταματα"]
 
     def stop(self):
         self.running = False
+
+    def _extract_command_after_wake_word(self, text: str) -> str | None:
+        lower = text.lower().strip()
+        for wake_word in self.wake_words:
+            wake = wake_word.lower().strip()
+            if lower == wake:
+                return ""
+            if lower.startswith(wake + " "):
+                return text[len(wake_word):].strip()
+        return None
 
     def run(self):
         while self.running:
@@ -67,10 +77,15 @@ class HUDVoiceWorker(QThread):
                 self.command.emit(text)
                 continue
 
-            if any(word in lower for word in self.wake_words):
-                self.awaiting_command = True
-                self.status.emit("Awake")
-                self.wake.emit()
+            command_after_wake = self._extract_command_after_wake_word(text)
+            if command_after_wake is not None:
+                if command_after_wake:
+                    self.status.emit("Thinking")
+                    self.command.emit(command_after_wake)
+                else:
+                    self.awaiting_command = True
+                    self.status.emit("Awake")
+                    self.wake.emit()
 
 
 class JarvisHUD(QWidget):
