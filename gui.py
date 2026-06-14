@@ -18,7 +18,7 @@ load_dotenv()
 from assistant.brain import Brain
 from assistant.commands import CommandHandler
 from assistant.memory import Memory
-from assistant.speech import listen, speak_async
+from assistant.speech import listen, speak_async, set_language, get_language
 
 
 class ResponseWorker(QThread):
@@ -53,6 +53,7 @@ class JarvisWindow(QWidget):
         self.commands = CommandHandler(self.memory)
         self.response_worker = None
         self.listen_worker = None
+        self.language = get_language()
 
         self.setWindowTitle('Jarvis AI Dashboard')
         self.resize(1100, 720)
@@ -71,7 +72,8 @@ class JarvisWindow(QWidget):
         main_layout.addWidget(info_panel, 1)
 
         self.setLayout(main_layout)
-        self.chat.append('<span class="jarvis">Jarvis:</span> Καλώς ήρθες πίσω, Παναγιώτα. Η φωνητική λειτουργία είναι ενεργή.')
+        self.apply_language_text()
+        self.chat.append('<span class="jarvis">Jarvis:</span> Welcome back, Panagiota. Voice mode is active.')
 
     def build_sidebar(self):
         panel = QFrame()
@@ -81,45 +83,49 @@ class JarvisWindow(QWidget):
 
         title = QLabel('JARVIS')
         title.setObjectName('title')
-        subtitle = QLabel('Personal AI Companion')
-        subtitle.setObjectName('subtitle')
+        self.subtitle = QLabel('Personal AI Companion')
+        self.subtitle.setObjectName('subtitle')
 
         self.status = QLabel('● Online')
         self.status.setObjectName('status')
 
-        self.voice_button = QPushButton('🎤 Άκουσέ με')
+        self.language_button = QPushButton('🌐 Language: English')
+        self.language_button.clicked.connect(self.toggle_language)
+
+        self.voice_button = QPushButton('🎤 Listen')
         self.voice_button.clicked.connect(self.listen_and_send)
 
-        self.voice_chat_button = QPushButton('🗣 Φωνητική Συνομιλία')
+        self.voice_chat_button = QPushButton('🗣 Voice Conversation')
         self.voice_chat_button.clicked.connect(self.voice_conversation)
 
-        briefing_button = QPushButton('☀ Πρωινό Briefing')
-        briefing_button.clicked.connect(lambda: self.process_text('daily briefing'))
+        self.briefing_button = QPushButton('☀ Daily Briefing')
+        self.briefing_button.clicked.connect(lambda: self.process_text('daily briefing'))
 
-        tasks_button = QPushButton('✅ Εργασίες')
-        tasks_button.clicked.connect(lambda: self.process_text('tasks'))
+        self.tasks_button = QPushButton('✅ Tasks')
+        self.tasks_button.clicked.connect(lambda: self.process_text('tasks'))
 
-        study_button = QPushButton('🎓 Study Mode')
-        study_button.clicked.connect(lambda: self.process_text('study mode'))
+        self.study_button = QPushButton('🎓 Study Mode')
+        self.study_button.clicked.connect(lambda: self.process_text('study mode'))
 
-        home_button = QPushButton('🏠 Home Mode')
-        home_button.clicked.connect(lambda: self.process_text('home mode'))
+        self.home_button = QPushButton('🏠 Home Mode')
+        self.home_button.clicked.connect(lambda: self.process_text('home mode'))
 
         layout.addWidget(title)
-        layout.addWidget(subtitle)
+        layout.addWidget(self.subtitle)
         layout.addWidget(self.status)
         layout.addSpacing(12)
+        layout.addWidget(self.language_button)
         layout.addWidget(self.voice_button)
         layout.addWidget(self.voice_chat_button)
-        layout.addWidget(briefing_button)
-        layout.addWidget(tasks_button)
-        layout.addWidget(study_button)
-        layout.addWidget(home_button)
+        layout.addWidget(self.briefing_button)
+        layout.addWidget(self.tasks_button)
+        layout.addWidget(self.study_button)
+        layout.addWidget(self.home_button)
         layout.addStretch()
 
-        footer = QLabel('Always ready to help')
-        footer.setObjectName('footer')
-        layout.addWidget(footer)
+        self.footer = QLabel('Always ready to help')
+        self.footer.setObjectName('footer')
+        layout.addWidget(self.footer)
 
         panel.setLayout(layout)
         return panel
@@ -130,8 +136,8 @@ class JarvisWindow(QWidget):
         layout = QVBoxLayout()
         layout.setSpacing(12)
 
-        header = QLabel('AI Conversation')
-        header.setObjectName('sectionTitle')
+        self.header = QLabel('AI Conversation')
+        self.header.setObjectName('sectionTitle')
 
         self.chat = QTextEdit()
         self.chat.setReadOnly(True)
@@ -139,7 +145,7 @@ class JarvisWindow(QWidget):
 
         input_row = QHBoxLayout()
         self.input_box = QLineEdit()
-        self.input_box.setPlaceholderText('Ρώτα τον Jarvis οτιδήποτε...')
+        self.input_box.setPlaceholderText('Ask Jarvis anything...')
         self.input_box.returnPressed.connect(self.send_message)
 
         self.send_button = QPushButton('Send')
@@ -148,7 +154,7 @@ class JarvisWindow(QWidget):
         input_row.addWidget(self.input_box, 4)
         input_row.addWidget(self.send_button, 1)
 
-        layout.addWidget(header)
+        layout.addWidget(self.header)
         layout.addWidget(self.chat)
         layout.addLayout(input_row)
         panel.setLayout(layout)
@@ -160,10 +166,15 @@ class JarvisWindow(QWidget):
         layout = QVBoxLayout()
         layout.setSpacing(14)
 
-        layout.addWidget(self.card('Today', 'Daily briefing, tasks, study goals'))
-        layout.addWidget(self.card('Voice', 'Greek Edge Neural Voice enabled'))
-        layout.addWidget(self.card('Memory', 'Personal facts and reminders'))
-        layout.addWidget(self.card('Modes', 'Study • Home • Evening'))
+        self.today_card = self.card('Today', 'Daily briefing, tasks, study goals')
+        self.voice_card = self.card('Voice', 'English Neural Voice enabled')
+        self.memory_card = self.card('Memory', 'Personal facts and reminders')
+        self.modes_card = self.card('Modes', 'Study • Home • Evening')
+
+        layout.addWidget(self.today_card)
+        layout.addWidget(self.voice_card)
+        layout.addWidget(self.memory_card)
+        layout.addWidget(self.modes_card)
         layout.addStretch()
 
         panel.setLayout(layout)
@@ -181,7 +192,61 @@ class JarvisWindow(QWidget):
         layout.addWidget(label)
         layout.addWidget(text)
         frame.setLayout(layout)
+        frame.title_label = label
+        frame.body_label = text
         return frame
+
+    def toggle_language(self):
+        self.language = 'el' if self.language == 'en' else 'en'
+        set_language(self.language)
+        self.apply_language_text()
+        message = 'Language changed to Greek.' if self.language == 'el' else 'Language changed to English.'
+        if self.language == 'el':
+            message = 'Η γλώσσα άλλαξε σε Ελληνικά.'
+        self.chat.append(f'<span class="jarvis">Jarvis:</span> {message}')
+        speak_async(message)
+
+    def apply_language_text(self):
+        if self.language == 'el':
+            self.subtitle.setText('Προσωπικός AI Βοηθός')
+            self.language_button.setText('🌐 Γλώσσα: Ελληνικά')
+            self.voice_button.setText('🎤 Άκουσέ με')
+            self.voice_chat_button.setText('🗣 Φωνητική Συνομιλία')
+            self.briefing_button.setText('☀ Πρωινό Briefing')
+            self.tasks_button.setText('✅ Εργασίες')
+            self.study_button.setText('🎓 Λειτουργία Διαβάσματος')
+            self.home_button.setText('🏠 Λειτουργία Σπιτιού')
+            self.footer.setText('Πάντα έτοιμος να βοηθήσω')
+            self.header.setText('Συνομιλία AI')
+            self.input_box.setPlaceholderText('Ρώτα τον Jarvis οτιδήποτε...')
+            self.today_card.title_label.setText('Σήμερα')
+            self.today_card.body_label.setText('Πρωινό briefing, εργασίες, στόχοι διαβάσματος')
+            self.voice_card.title_label.setText('Φωνή')
+            self.voice_card.body_label.setText('Ελληνική Neural φωνή ενεργή')
+            self.memory_card.title_label.setText('Μνήμη')
+            self.memory_card.body_label.setText('Προσωπικά στοιχεία και υπενθυμίσεις')
+            self.modes_card.title_label.setText('Λειτουργίες')
+            self.modes_card.body_label.setText('Διάβασμα • Σπίτι • Βράδυ')
+        else:
+            self.subtitle.setText('Personal AI Companion')
+            self.language_button.setText('🌐 Language: English')
+            self.voice_button.setText('🎤 Listen')
+            self.voice_chat_button.setText('🗣 Voice Conversation')
+            self.briefing_button.setText('☀ Daily Briefing')
+            self.tasks_button.setText('✅ Tasks')
+            self.study_button.setText('🎓 Study Mode')
+            self.home_button.setText('🏠 Home Mode')
+            self.footer.setText('Always ready to help')
+            self.header.setText('AI Conversation')
+            self.input_box.setPlaceholderText('Ask Jarvis anything...')
+            self.today_card.title_label.setText('Today')
+            self.today_card.body_label.setText('Daily briefing, tasks, study goals')
+            self.voice_card.title_label.setText('Voice')
+            self.voice_card.body_label.setText('English Neural Voice enabled')
+            self.memory_card.title_label.setText('Memory')
+            self.memory_card.body_label.setText('Personal facts and reminders')
+            self.modes_card.title_label.setText('Modes')
+            self.modes_card.body_label.setText('Study • Home • Evening')
 
     def set_busy(self, is_busy: bool, text: str = '● Online'):
         self.send_button.setDisabled(is_busy)
@@ -191,11 +256,13 @@ class JarvisWindow(QWidget):
 
     def process_text(self, text: str):
         if self.response_worker and self.response_worker.isRunning():
-            self.chat.append('<span class="jarvis">Jarvis:</span> Περιμένω να τελειώσει η προηγούμενη απάντηση.')
+            msg = 'Please wait for the previous answer to finish.' if self.language == 'en' else 'Περίμενε να τελειώσει η προηγούμενη απάντηση.'
+            self.chat.append(f'<span class="jarvis">Jarvis:</span> {msg}')
             return
 
         self.chat.append(f'<span class="user">You:</span> {text}')
-        self.chat.append('<span class="jarvis">Jarvis:</span> Σκέφτομαι...')
+        thinking = 'Thinking...' if self.language == 'en' else 'Σκέφτομαι...'
+        self.chat.append(f'<span class="jarvis">Jarvis:</span> {thinking}')
         self.set_busy(True, '● Thinking')
 
         self.response_worker = ResponseWorker(text, self.brain, self.commands)
@@ -224,7 +291,8 @@ class JarvisWindow(QWidget):
         if self.listen_worker and self.listen_worker.isRunning():
             return
 
-        self.chat.append('<span class="jarvis">Jarvis:</span> Σε ακούω...')
+        listening = 'Listening...' if self.language == 'en' else 'Σε ακούω...'
+        self.chat.append(f'<span class="jarvis">Jarvis:</span> {listening}')
         self.set_busy(True, '● Listening')
         self.listen_worker = ListenWorker()
         self.listen_worker.finished.connect(self.on_listen_ready)
@@ -233,7 +301,9 @@ class JarvisWindow(QWidget):
     def on_listen_ready(self, text: str):
         self.set_busy(False, '● Online')
         if not text:
-            message = 'Δεν άκουσα κάτι καθαρά. Έλεγξε το μικρόφωνο και δοκίμασε ξανά.'
+            message = 'I could not hear clearly. Check your microphone and try again.'
+            if self.language == 'el':
+                message = 'Δεν άκουσα κάτι καθαρά. Έλεγξε το μικρόφωνο και δοκίμασε ξανά.'
             self.chat.append(f'<span class="jarvis">Jarvis:</span> {message}')
             speak_async(message)
             return
@@ -241,7 +311,8 @@ class JarvisWindow(QWidget):
         self.process_text(text)
 
     def voice_conversation(self):
-        speak_async('Σε ακούω.')
+        message = 'I am listening.' if self.language == 'en' else 'Σε ακούω.'
+        speak_async(message)
         self.listen_and_send()
 
     @staticmethod
