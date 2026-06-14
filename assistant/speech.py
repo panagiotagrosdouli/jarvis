@@ -1,30 +1,28 @@
 def speak(text: str) -> None:
     try:
         import pyttsx3
-    except ImportError:
+        engine = pyttsx3.init()
+        engine.say(text)
+        engine.runAndWait()
+    except Exception:
         print(text)
-        return
-
-    engine = pyttsx3.init()
-    engine.say(text)
-    engine.runAndWait()
 
 
 def listen() -> str:
     try:
         import speech_recognition as sr
-    except ImportError:
-        return input("You: ")
+        recognizer = sr.Recognizer()
 
-    recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
-        print("Listening...")
-        recognizer.adjust_for_ambient_noise(source)
-        audio = recognizer.listen(source)
+        try:
+            microphone = sr.Microphone()
+        except Exception:
+            return ""
 
-    try:
-        return recognizer.recognize_google(audio)
-    except sr.UnknownValueError:
+        with microphone as source:
+            print("Listening...")
+            recognizer.adjust_for_ambient_noise(source, duration=0.5)
+            audio = recognizer.listen(source, timeout=5, phrase_time_limit=10)
+
+        return recognizer.recognize_google(audio, language="el-GR")
+    except Exception:
         return ""
-    except sr.RequestError:
-        return input("Speech service unavailable. Type instead: ")
