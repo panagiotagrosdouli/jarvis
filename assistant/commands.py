@@ -1,4 +1,5 @@
 import datetime as dt
+from assistant.care_coach import CareCoach
 from assistant.daily_companion import DailyCompanion
 from assistant.desktop import DesktopAutomation
 from assistant.focus import FocusManager
@@ -17,6 +18,7 @@ class CommandHandler:
         self.pdf = PDFAssistant()
         self.focus = FocusManager()
         self.vision = VisionAssistant()
+        self.care = CareCoach()
 
     def handle(self, text: str) -> str | None:
         raw_text = text.strip()
@@ -31,6 +33,21 @@ class CommandHandler:
         if command in {"time", "ώρα", "τι ώρα είναι"}:
             now = dt.datetime.now().strftime("%H:%M")
             return f"The current time is {now}."
+
+        if command in {"care mode", "digital mama", "coach me", "μαμα mode", "μαμά mode"}:
+            return self.care.care_mode()
+
+        if command in {"plan my day", "organize my day", "φτιάξε μου τη μέρα", "οργάνωσε τη μέρα μου"}:
+            return self.care.plan_day()
+
+        if command in {"what should i do now", "what now", "τι να κάνω τώρα", "πες μου τι να κάνω"}:
+            return self.care.plan_now()
+
+        if command in {"home reset", "cleaning plan", "σπίτι reset", "συμμάζεμα"}:
+            return self.care.home_reset()
+
+        if command in {"study push", "push me to study", "σπρώξε με να διαβάσω", "βοήθα με να διαβάσω"}:
+            return self.care.study_push()
 
         if command in {"weather", "today weather", "what is the weather", "καιρός", "τι καιρό έχει"}:
             return self.weather.summary()
@@ -154,6 +171,11 @@ class CommandHandler:
     def help_text() -> str:
         return (
             "Available commands:\n"
+            "- care mode\n"
+            "- plan my day\n"
+            "- what should i do now\n"
+            "- home reset\n"
+            "- study push\n"
             "- daily briefing\n"
             "- weather\n"
             "- analyze screen\n"
