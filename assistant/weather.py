@@ -3,10 +3,13 @@ import os
 import urllib.parse
 import urllib.request
 
+from assistant.settings import SettingsManager
+
 
 class WeatherService:
     def __init__(self):
-        self.location = os.getenv("JARVIS_LOCATION", "Thessaloniki")
+        settings = SettingsManager()
+        self.location = os.getenv("JARVIS_LOCATION", settings.city())
 
     def summary(self, location: str | None = None) -> str:
         city = (location or self.location).strip() or "Thessaloniki"
@@ -37,7 +40,7 @@ class WeatherService:
         except Exception:
             return (
                 f"Weather is not available right now for {city}. "
-                "Check your internet connection or set JARVIS_LOCATION in your .env file."
+                "Check your internet connection or set city in settings.json."
             )
 
     def _recommendation(self, description: str, temp_text: str) -> str:
