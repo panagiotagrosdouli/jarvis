@@ -8,27 +8,50 @@ class CommandHandler:
         self.memory = memory
 
     def handle(self, text: str) -> str | None:
-        command = text.strip().lower()
+        raw_text = text.strip()
+        command = raw_text.lower()
 
-        if command in {"help", "commands"}:
+        if command in {"help", "commands", "βοήθεια", "εντολές"}:
             return self.help_text()
 
-        if command in {"exit", "quit", "bye"}:
+        if command in {"exit", "quit", "bye", "έξοδος", "σταμάτα"}:
             return "EXIT"
 
-        if command == "time":
+        if command in {"time", "ώρα", "τι ώρα είναι"}:
             now = dt.datetime.now().strftime("%H:%M")
             return f"The current time is {now}."
 
         if command.startswith("remember "):
-            content = text.strip()[9:]
+            content = raw_text[9:]
             return self.memory.remember(content)
 
-        if command == "recall":
+        if command.startswith("θυμήσου "):
+            content = raw_text[8:]
+            return self.memory.remember(content)
+
+        if command in {"recall", "show memory", "memory", "μνήμη", "δείξε μνήμη"}:
             memories = self.memory.recall()
             if not memories:
                 return "I do not have any memories yet."
             return "Here is what I remember:\n" + "\n".join(f"- {item}" for item in memories)
+
+        if command.startswith("forget "):
+            key = raw_text[7:]
+            return self.memory.forget(key)
+
+        if command.startswith("ξέχνα "):
+            key = raw_text[6:]
+            return self.memory.forget(key)
+
+        if command in {"who am i", "whoami", "ποια είμαι", "ποιος είμαι"}:
+            return self.memory.profile_summary()
+
+        if command.startswith("what is "):
+            key = raw_text[8:].strip().rstrip("?")
+            value = self.memory.get_item(key)
+            if value is None:
+                return f"I do not know {key} yet."
+            return f"{key}: {value}"
 
         if command == "open youtube":
             webbrowser.open("https://www.youtube.com")
@@ -44,10 +67,14 @@ class CommandHandler:
     def help_text() -> str:
         return (
             "Available commands:\n"
-            "- help\n"
-            "- time\n"
-            "- remember <something>\n"
-            "- recall\n"
+            "- help / βοήθεια\n"
+            "- time / ώρα\n"
+            "- remember key=value\n"
+            "- θυμήσου key=value\n"
+            "- show memory / μνήμη\n"
+            "- forget key / ξέχνα key\n"
+            "- who am i\n"
+            "- what is key\n"
             "- open youtube\n"
             "- open google\n"
             "- exit"
