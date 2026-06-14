@@ -4,6 +4,7 @@ import sys
 from assistant.brain import Brain
 from assistant.commands import CommandHandler
 from assistant.memory import Memory
+from assistant.speech import listen
 
 
 class JarvisWindow(QWidget):
@@ -25,24 +26,25 @@ class JarvisWindow(QWidget):
         self.input_box = QLineEdit()
         self.input_box.returnPressed.connect(self.send_message)
 
-        self.button = QPushButton('Send')
-        self.button.clicked.connect(self.send_message)
+        self.send_button = QPushButton('Send')
+        self.send_button.clicked.connect(self.send_message)
+
+        self.voice_button = QPushButton('🎤 Start Listening')
+        self.voice_button.clicked.connect(self.listen_and_send)
 
         layout.addWidget(self.chat)
         layout.addWidget(self.input_box)
-        layout.addWidget(self.button)
+        layout.addWidget(self.send_button)
+        layout.addWidget(self.voice_button)
 
         self.setLayout(layout)
-        self.chat.append('Jarvis: Hello Panagiota!')
+        self.chat.append('Jarvis: Hello Panagiota! Voice mode is available.')
 
-    def send_message(self):
-        text = self.input_box.text().strip()
-        if not text:
-            return
-
+    def process_text(self, text: str):
         self.chat.append(f'You: {text}')
 
         response = self.commands.handle(text)
+
         if response == 'EXIT':
             self.close()
             return
@@ -51,7 +53,24 @@ class JarvisWindow(QWidget):
             response = self.brain.answer(text)
 
         self.chat.append(f'Jarvis: {response}')
+
+    def send_message(self):
+        text = self.input_box.text().strip()
+        if not text:
+            return
+
+        self.process_text(text)
         self.input_box.clear()
+
+    def listen_and_send(self):
+        self.chat.append('Jarvis: Listening...')
+        text = listen()
+
+        if not text:
+            self.chat.append('Jarvis: I could not hear anything.')
+            return
+
+        self.process_text(text)
 
 
 if __name__ == '__main__':
