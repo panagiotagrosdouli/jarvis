@@ -1,5 +1,8 @@
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QTextEdit, QLineEdit, QPushButton
 import sys
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from assistant.brain import Brain
 from assistant.commands import CommandHandler
