@@ -1,11 +1,12 @@
 import datetime as dt
-import webbrowser
+from assistant.desktop import DesktopAutomation
 from assistant.memory import Memory
 
 
 class CommandHandler:
     def __init__(self, memory: Memory):
         self.memory = memory
+        self.desktop = DesktopAutomation()
 
     def handle(self, text: str) -> str | None:
         raw_text = text.strip()
@@ -22,12 +23,10 @@ class CommandHandler:
             return f"The current time is {now}."
 
         if command.startswith("remember "):
-            content = raw_text[9:]
-            return self.memory.remember(content)
+            return self.memory.remember(raw_text[9:])
 
         if command.startswith("θυμήσου "):
-            content = raw_text[8:]
-            return self.memory.remember(content)
+            return self.memory.remember(raw_text[8:])
 
         if command in {"recall", "show memory", "memory", "μνήμη", "δείξε μνήμη"}:
             memories = self.memory.recall()
@@ -36,12 +35,10 @@ class CommandHandler:
             return "Here is what I remember:\n" + "\n".join(f"- {item}" for item in memories)
 
         if command.startswith("forget "):
-            key = raw_text[7:]
-            return self.memory.forget(key)
+            return self.memory.forget(raw_text[7:])
 
         if command.startswith("ξέχνα "):
-            key = raw_text[6:]
-            return self.memory.forget(key)
+            return self.memory.forget(raw_text[6:])
 
         if command in {"who am i", "whoami", "ποια είμαι", "ποιος είμαι"}:
             return self.memory.profile_summary()
@@ -49,24 +46,25 @@ class CommandHandler:
         if command.startswith("memory "):
             key = raw_text[7:].strip().rstrip("?")
             value = self.memory.get_item(key)
-            if value is None:
-                return f"I do not know {key} yet."
-            return f"{key}: {value}"
+            return f"{key}: {value}" if value else f"I do not know {key} yet."
 
-        if command.startswith("what do you know about "):
-            key = raw_text[24:].strip().rstrip("?")
-            value = self.memory.get_item(key)
-            if value is None:
-                return f"I do not have a saved memory for {key} yet."
-            return f"{key}: {value}"
+        if command in {"open google", "άνοιξε google"}:
+            return self.desktop.open_url("https://www.google.com")
 
-        if command == "open youtube":
-            webbrowser.open("https://www.youtube.com")
-            return "Opening YouTube."
+        if command in {"open youtube", "άνοιξε youtube"}:
+            return self.desktop.open_url("https://www.youtube.com")
 
-        if command == "open google":
-            webbrowser.open("https://www.google.com")
-            return "Opening Google."
+        if command.startswith("open app "):
+            return self.desktop.open_app(raw_text[9:])
+
+        if command.startswith("άνοιξε εφαρμογή "):
+            return self.desktop.open_app(raw_text[16:])
+
+        if command.startswith("google "):
+            return self.desktop.search_google(raw_text[7:])
+
+        if command.startswith("youtube "):
+            return self.desktop.search_youtube(raw_text[8:])
 
         return None
 
@@ -82,8 +80,12 @@ class CommandHandler:
             "- forget key / ξέχνα key\n"
             "- who am i\n"
             "- memory key\n"
-            "- what do you know about key\n"
-            "- open youtube\n"
             "- open google\n"
+            "- open youtube\n"
+            "- open app chrome\n"
+            "- open app vscode\n"
+            "- open app spotify\n"
+            "- google search words\n"
+            "- youtube search words\n"
             "- exit"
         )
