@@ -12,6 +12,7 @@ from assistant.commands import CommandHandler
 from assistant.daily_companion import DailyCompanion
 from assistant.focus import FocusManager
 from assistant.memory import Memory
+from assistant.settings import SettingsManager
 from assistant.speech import listen, speak_async
 from assistant.weather import WeatherService
 
@@ -37,11 +38,11 @@ class HUDVoiceWorker(QThread):
     command = pyqtSignal(str)
     status = pyqtSignal(str)
 
-    def __init__(self):
+    def __init__(self, wake_words: list[str]):
         super().__init__()
         self.running = True
         self.awaiting_command = False
-        self.wake_words = ["jarvis", "hey jarvis", "τζάρβις", "τζαρβις", "άνοιξε", "ανοιξε"]
+        self.wake_words = wake_words
         self.stop_words = ["stop listening", "stop", "σταμάτα", "σταματα"]
 
     def stop(self):
@@ -74,6 +75,7 @@ class HUDVoiceWorker(QThread):
 class JarvisHUD(QWidget):
     def __init__(self):
         super().__init__()
+        self.settings = SettingsManager()
         self.weather = WeatherService()
         self.daily = DailyCompanion()
         self.focus = FocusManager()
@@ -91,7 +93,7 @@ class JarvisHUD(QWidget):
             | Qt.WindowType.Tool
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setWindowOpacity(0.92)
+        self.setWindowOpacity(self.settings.transparency())
         self.resize(340, 330)
 
         self.panel = QFrame()
@@ -153,7 +155,7 @@ class JarvisHUD(QWidget):
     def start_voice_mode(self):
         if self.voice_worker and self.voice_worker.isRunning():
             return
-        self.voice_worker = HUDVoiceWorker()
+        self.voice_worker = HUDVoiceWorker(self.settings.wake_words())
         self.voice_worker.wake.connect(self.on_wake)
         self.voice_worker.command.connect(self.on_voice_command)
         self.voice_worker.status.connect(self.set_status)
