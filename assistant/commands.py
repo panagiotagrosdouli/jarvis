@@ -4,6 +4,7 @@ from assistant.desktop import DesktopAutomation
 from assistant.focus import FocusManager
 from assistant.memory import Memory
 from assistant.pdf_assistant import PDFAssistant
+from assistant.vision import VisionAssistant
 from assistant.weather import WeatherService
 
 
@@ -15,6 +16,7 @@ class CommandHandler:
         self.weather = WeatherService()
         self.pdf = PDFAssistant()
         self.focus = FocusManager()
+        self.vision = VisionAssistant()
 
     def handle(self, text: str) -> str | None:
         raw_text = text.strip()
@@ -38,6 +40,9 @@ class CommandHandler:
 
         if command.startswith("καιρός "):
             return self.weather.summary(raw_text[7:])
+
+        if command in {"analyze screen", "screen analysis", "what is on my screen", "screenshot", "analyze my screen"}:
+            return self.vision.analyze_screen()
 
         if command.startswith("start focus"):
             return self.focus.start(raw_text[11:].strip() or "general")
@@ -151,7 +156,7 @@ class CommandHandler:
             "Available commands:\n"
             "- daily briefing\n"
             "- weather\n"
-            "- weather city\n"
+            "- analyze screen\n"
             "- add task task name\n"
             "- tasks\n"
             "- done 1\n"
@@ -163,11 +168,6 @@ class CommandHandler:
             "- pdf flashcards path/to/file.pdf\n"
             "- pdf quiz path/to/file.pdf\n"
             "- pdf exam path/to/file.pdf\n"
-            "- daily lesson\n"
-            "- daily tip\n"
-            "- study mode\n"
-            "- home mode\n"
-            "- evening reflection\n"
             "- remember key=value\n"
             "- show memory\n"
             "- open google\n"
