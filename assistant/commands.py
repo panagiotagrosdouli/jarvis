@@ -9,6 +9,7 @@ from assistant.memory import Memory
 from assistant.mission import MissionManager
 from assistant.pdf_assistant import PDFAssistant
 from assistant.smart_memory import SmartMemory
+from assistant.study_detector import StudyDetector
 from assistant.vision import VisionAssistant
 from assistant.weather import WeatherService
 
@@ -27,6 +28,7 @@ class CommandHandler:
         self.core = JarvisCore()
         self.mission = MissionManager()
         self.auto_study = AutoStudyTracker()
+        self.study_detector = StudyDetector()
 
     def handle(self, text: str) -> str | None:
         raw_text = text.strip()
@@ -52,8 +54,12 @@ class CommandHandler:
             return self.auto_study.stop()
         if command in {"auto study status", "study tracking status"}:
             return self.auto_study.status()
-        if command in {"auto study report", "study tracking report"}:
+        if command in {"auto study report", "study tracking report", "study report"}:
             return self.auto_study.report()
+        if command in {"detect study", "check study", "auto detect study"}:
+            return self.study_detector.detect_once()
+        if command in {"current window", "active window"}:
+            return self.study_detector.current_window()
 
         if command.startswith("create mission "):
             return self.mission.create_mission(raw_text[15:])
@@ -211,6 +217,8 @@ class CommandHandler:
             "- stop auto study\n"
             "- auto study status\n"
             "- auto study report\n"
+            "- detect study\n"
+            "- current window\n"
             "- create mission Pass Computer Networks\n"
             "- show mission\n"
             "- mission briefing\n"
