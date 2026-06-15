@@ -1,4 +1,5 @@
 import datetime as dt
+from assistant.auto_study_tracker import AutoStudyTracker
 from assistant.care_coach import CareCoach
 from assistant.daily_companion import DailyCompanion
 from assistant.desktop import DesktopAutomation
@@ -25,6 +26,7 @@ class CommandHandler:
         self.smart = SmartMemory()
         self.core = JarvisCore()
         self.mission = MissionManager()
+        self.auto_study = AutoStudyTracker()
 
     def handle(self, text: str) -> str | None:
         raw_text = text.strip()
@@ -43,6 +45,15 @@ class CommandHandler:
             return "EXIT"
         if command in {"time", "what time is it"}:
             return f"The current time is {dt.datetime.now().strftime('%H:%M')}."
+
+        if command.startswith("start auto study "):
+            return self.auto_study.start(raw_text[17:])
+        if command in {"stop auto study", "end auto study"}:
+            return self.auto_study.stop()
+        if command in {"auto study status", "study tracking status"}:
+            return self.auto_study.status()
+        if command in {"auto study report", "study tracking report"}:
+            return self.auto_study.report()
 
         if command.startswith("create mission "):
             return self.mission.create_mission(raw_text[15:])
@@ -196,22 +207,23 @@ class CommandHandler:
     def help_text() -> str:
         return (
             "Available commands:\n"
+            "- start auto study Computer Networks\n"
+            "- stop auto study\n"
+            "- auto study status\n"
+            "- auto study report\n"
             "- create mission Pass Computer Networks\n"
             "- show mission\n"
             "- mission briefing\n"
-            "- add objective Subnetting\n"
             "- complete objective Routing\n"
             "- jarvis status\n"
             "- what should i do now\n"
             "- what should i study\n"
             "- prepare me for Computer Networks exam\n"
             "- daily intelligence\n"
-            "- add exam Computer Networks on 2026-06-17 at 09:00\n"
             "- show exams\n"
             "- show goals\n"
             "- weather\n"
             "- analyze screen\n"
-            "- add task task name\n"
             "- start focus topic\n"
             "- end focus\n"
             "- help"
