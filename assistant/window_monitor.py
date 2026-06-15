@@ -43,21 +43,16 @@ $builder.ToString()
         return self._windows_active_window()
 
     def _linux_active_window(self) -> str:
-        commands = [
-            ["xdotool", "getactivewindow", "getwindowname"],
-            ["bash", "-lc", "xprop -id $(xdotool getactivewindow) WM_NAME | cut -d '"' -f 2"],
-        ]
-        for command in commands:
-            try:
-                result = subprocess.run(
-                    command,
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                    check=False,
-                )
-                if result.returncode == 0 and result.stdout.strip():
-                    return result.stdout.strip()
-            except Exception:
-                continue
+        try:
+            result = subprocess.run(
+                ["xdotool", "getactivewindow", "getwindowname"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                return result.stdout.strip()
+        except Exception:
+            pass
         return ""
